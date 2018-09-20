@@ -35,6 +35,7 @@ Param (
 
 $altaroEvents = Get-EventLog -Source "Altaro VM Backup" -LogName Application -Newest 10;
 $filterBackupType = "";
+$resultCode = 2;
 
 switch ($BackupType.ToLower())
 {
@@ -70,17 +71,19 @@ for ($i = 0; $i -lt $altaroEvents.Length; $i++)
     switch ($entryType)
     {
         "Error" {
-            return 1; # Failure
+            $resultCode = 1; # Failure
         }
 
         "Information" {
-            return 0; # Success
+            $resultCode = 0; # Success
         }
 
         default {
-            return 2; # Unknown
+            $resultCode = 2; # Unknown
         }
     }
 }
 
-return 2; # Unknown - we didn't find anything!!
+# Push value to Zabbix
+#
+& ($env:ProgramFiles + "\Zabbix Agent\bin\win64\zabbix_sender.exe") ("-z", $ZabbixIP, "-p", "10051", "-s", $env:ComputerName, "-k", ("altaro.backupstatus[" + $BackupType.ToLower() + "]"), "-o", $resultCode)
