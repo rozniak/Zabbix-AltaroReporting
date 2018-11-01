@@ -26,7 +26,11 @@
 Param (
     [Parameter(Position=0, Mandatory=$TRUE)]
     [String]
-    $BackupType
+    $BackupType,
+    [Parameter(Position=1, Mandatory=$TRUE)]
+    [ValidatePattern("^(\d+\.){3}\d+$")]
+    [String]
+    $ZabbixIP
 )
 
 # FUNCTION DEFINITIONS
@@ -36,16 +40,16 @@ Function Send-ZabbixValue
     Param (
         [Parameter(Position=0, Mandatory=$TRUE)]
         [System.Byte]
-        $ResultCode
+        $ResultCode,
+		[Parameter(Position=1, Mandatory=$TRUE)]
+        [ValidatePattern("^(\d+\.){3}\d+$")]
+        [String]
+        $ZabbixHost
     )
-
-    Write-Host $ResultCode;
-
-    Exit
 
     # Push value to Zabbix
     #
-    & ($env:ProgramFiles + "\Zabbix Agent\bin\win64\zabbix_sender.exe") ("-z", $ZabbixIP, "-p", "10051", "-s", $env:ComputerName, "-k", ("altaro.backupstatus[" + $BackupType.ToLower() + "]"), "-o", $ResultCode)
+    & ($env:ProgramFiles + "\Zabbix Agent\bin\win64\zabbix_sender.exe") ("-z", $ZabbixHost, "-p", "10051", "-s", $env:ComputerName, "-k", ("altaro.backupstatus[" + $BackupType.ToLower() + "]"), "-o", $ResultCode)
 }
 
 # CONSTANTS
@@ -112,7 +116,7 @@ for ($i = 0; $i -lt $altaroEvents.Length; $i++)
 switch ($eventOnsite.EntryType)
 {
     "Error" {
-        Send-ZabbixValue -ResultCode 1 # Failure
+        Send-ZabbixValue -ResultCode 1 -ZabbixHost $ZabbixIP # Failure
     }
 
     "Information" {
@@ -120,7 +124,7 @@ switch ($eventOnsite.EntryType)
     }
     
     default {
-        Send-ZabbixValue -ResultCode 3; # Unknown
+        Send-ZabbixValue -ResultCode 3 -ZabbixHost $ZabbixIP; # Unknown
     }
 }
 
@@ -128,20 +132,20 @@ switch ($eventOnsite.EntryType)
 #
 if ($eventOnsite.TimeGenerated -le $cutoffDateTime)
 {
-    Send-ZabbixValue -ResultCode 2; # Out of date
+    Send-ZabbixValue -ResultCode 2 -ZabbixHost $ZabbixIP; # Out of date
 }
 
 # See if we need to check offsite
 #
 if (-Not $checkOffsite)
 {
-    Send-ZabbixValue -ResultCode $resultCode;
+    Send-ZabbixValue -ResultCode $resultCode -ZabbixHost $ZabbixIP;
 }
 
 switch ($eventOffsite.EntryType)
 {
     "Error" {
-        Send-ZabbixValue -ResultCode 1; # Failure
+        Send-ZabbixValue -ResultCode 1 -ZabbixHost $ZabbixIP; # Failure
     }
 
     "Information" {
@@ -149,7 +153,7 @@ switch ($eventOffsite.EntryType)
     }
 
     default {
-        Send-ZabbixValue -ResultCode 3; # Unknown
+        Send-ZabbixValue -ResultCode 3 -ZabbixHost $ZabbixIP; # Unknown
     }
 }
 
@@ -157,9 +161,9 @@ switch ($eventOffsite.EntryType)
 #
 if ($eventOffsite.TimeGenerated -le $cutoffDateTime)
 {
-    Send-ZabbixValue -ResultCode 2; # Out of date
+    Send-ZabbixValue -ResultCode 2 -ZabbixHost $ZabbixIP; # Out of date
 }
 else
 {
-    Send-ZabbixValue -ResultCode 0; # Success
+    Send-ZabbixValue -ResultCode 0 -ZabbixHost $ZabbixIP; # Success
 }
