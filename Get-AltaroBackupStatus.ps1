@@ -50,6 +50,8 @@ Function Send-ZabbixValue
     # Push value to Zabbix
     #
     & ($env:ProgramFiles + "\Zabbix Agent\bin\win64\zabbix_sender.exe") ("-z", $ZabbixHost, "-p", "10051", "-s", $env:ComputerName, "-k", ("altaro.backupstatus[" + $BackupType.ToLower() + "]"), "-o", $ResultCode)
+	
+	Exit
 }
 
 # CONSTANTS
