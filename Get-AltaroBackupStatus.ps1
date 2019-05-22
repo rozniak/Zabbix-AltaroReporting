@@ -13,6 +13,10 @@
 
     .PARAMETER ZabbixIP
     The IP address of the Zabbix server/proxy to send the value to.
+
+    .PARAMETER ComputerName
+    The hostname that should be reported to Zabbix, in case the hostname you set up in
+    Zabbix isn't exactly the same as this computer's name.
     
     .EXAMPLE
     Get-AltaroBackupStatus.ps1 -BackupType Offsite -ZabbixIP 10.0.0.240
@@ -30,7 +34,11 @@ Param (
     [Parameter(Position=1, Mandatory=$TRUE)]
     [ValidatePattern("^(\d+\.){3}\d+$")]
     [String]
-    $ZabbixIP
+    $ZabbixIP,
+    [Parameter(Position=2, Mandatory=$FALSE)]
+    [ValidatePattern(".+")]
+    [String]
+    $ComputerName = $env:COMPUTERNAME
 )
 
 # FUNCTION DEFINITIONS
@@ -44,12 +52,13 @@ Function Send-ZabbixValue
 		[Parameter(Position=1, Mandatory=$TRUE)]
         [ValidatePattern("^(\d+\.){3}\d+$")]
         [String]
-        $ZabbixHost
+        $ZabbixHost,
+        [Parameter(Position=2, Mandatory=$TRUE)]
+        [String]
+        $ZabbixHostname
     )
 
-    # Push value to Zabbix
-    #
-    & ($env:ProgramFiles + "\Zabbix Agent\bin\win64\zabbix_sender.exe") ("-z", $ZabbixHost, "-p", "10051", "-s", $env:ComputerName, "-k", ("altaro.backupstatus[" + $BackupType.ToLower() + "]"), "-o", $ResultCode)
+    & ($env:ProgramFiles + "\Zabbix Agent\bin\win64\zabbix_sender.exe") ("-z", $ZabbixHost, "-p", "10051", "-s", $ZabbixHostname, "-k", ("altaro.backupstatus[" + $BackupType.ToLower() + "]"), "-o", $ResultCode);
 	
 	Exit
 }
@@ -118,7 +127,7 @@ for ($i = 0; $i -lt $altaroEvents.Length; $i++)
 switch ($eventOnsite.EntryType)
 {
     "Error" {
-        Send-ZabbixValue -ResultCode 1 -ZabbixHost $ZabbixIP # Failure
+        Send-ZabbixValue -ResultCode 1 -ZabbixHost $ZabbixIP -ZabbixHostname $ComputerName; # Failure
     }
 
     "Information" {
@@ -126,7 +135,7 @@ switch ($eventOnsite.EntryType)
     }
     
     default {
-        Send-ZabbixValue -ResultCode 3 -ZabbixHost $ZabbixIP; # Unknown
+        Send-ZabbixValue -ResultCode 3 -ZabbixHost $ZabbixIP -ZabbixHostname $ComputerName; # Unknown
     }
 }
 
@@ -134,20 +143,20 @@ switch ($eventOnsite.EntryType)
 #
 if ($eventOnsite.TimeGenerated -le $cutoffDateTime)
 {
-    Send-ZabbixValue -ResultCode 2 -ZabbixHost $ZabbixIP; # Out of date
+    Send-ZabbixValue -ResultCode 2 -ZabbixHost $ZabbixIP -ZabbixHostname $ComputerName; # Out of date
 }
 
 # See if we need to check offsite
 #
 if (-Not $checkOffsite)
 {
-    Send-ZabbixValue -ResultCode $resultCode -ZabbixHost $ZabbixIP;
+    Send-ZabbixValue -ResultCode $resultCode -ZabbixHost $ZabbixIP -ZabbixHostname $ComputerName;
 }
 
 switch ($eventOffsite.EntryType)
 {
     "Error" {
-        Send-ZabbixValue -ResultCode 1 -ZabbixHost $ZabbixIP; # Failure
+        Send-ZabbixValue -ResultCode 1 -ZabbixHost $ZabbixIP -ZabbixHostname $ComputerName; # Failure
     }
 
     "Information" {
@@ -155,7 +164,7 @@ switch ($eventOffsite.EntryType)
     }
 
     default {
-        Send-ZabbixValue -ResultCode 3 -ZabbixHost $ZabbixIP; # Unknown
+        Send-ZabbixValue -ResultCode 3 -ZabbixHost $ZabbixIP -ZabbixHostname $ComputerName; # Unknown
     }
 }
 
@@ -163,9 +172,9 @@ switch ($eventOffsite.EntryType)
 #
 if ($eventOffsite.TimeGenerated -le $cutoffDateTime)
 {
-    Send-ZabbixValue -ResultCode 2 -ZabbixHost $ZabbixIP; # Out of date
+    Send-ZabbixValue -ResultCode 2 -ZabbixHost $ZabbixIP -ZabbixHostname $ComputerName; # Out of date
 }
 else
 {
-    Send-ZabbixValue -ResultCode 0 -ZabbixHost $ZabbixIP; # Success
+    Send-ZabbixValue -ResultCode 0 -ZabbixHost $ZabbixIP -ZabbixHostname $ComputerName; # Success
 }
