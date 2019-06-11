@@ -49,7 +49,7 @@ Function Send-ZabbixValue
         [Parameter(Position=0, Mandatory=$TRUE)]
         [System.Byte]
         $ResultCode,
-		[Parameter(Position=1, Mandatory=$TRUE)]
+        [Parameter(Position=1, Mandatory=$TRUE)]
         [ValidatePattern("^(\d+\.){3}\d+$")]
         [String]
         $ZabbixHost,
@@ -58,9 +58,11 @@ Function Send-ZabbixValue
         $ZabbixHostname
     )
 
-    & ($env:ProgramFiles + "\Zabbix Agent\bin\win64\zabbix_sender.exe") ("-z", $ZabbixHost, "-p", "10051", "-s", $ZabbixHostname, "-k", ("altaro.backupstatus[" + $BackupType.ToLower() + "]"), "-o", $ResultCode);
-	
-	Exit
+    $arch = [System.IntPtr]::Size * 8;
+    
+    & ($env:ProgramFiles + "\Zabbix Agent\bin\win" + $arch + "\zabbix_sender.exe") ("-z", $ZabbixHost, "-p", "10051", "-s", $ZabbixHostname, "-k", ("altaro.backupstatus[" + $BackupType.ToLower() + "]"), "-o", $ResultCode);
+    
+    Exit
 }
 
 # CONSTANTS
