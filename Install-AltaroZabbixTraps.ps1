@@ -35,7 +35,10 @@ Param (
     $ComputerName = $env:COMPUTERNAME
 )
 
+$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
+
 $globalTrigger   = New-ScheduledTaskTrigger -Daily -At 8am
+$guid            = Get-Content -Path "$scriptRoot\task-guid"
 $systemPrincipal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 
 # Set up Altaro VM Backup status tasks
@@ -49,7 +52,7 @@ foreach ($backupType in $backupTypes)
 {
     $monitorAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument ('-NoProfile -NoLogo -File "' + $env:ProgramFiles + '\Zabbix Agent\ALTAROREPORTS\Get-AltaroBackupStatus.ps1" -BackupType ' + $backupType + ' -ZabbixIP ' + $ZabbixIP + ' -ComputerName ' + $ComputerName)
 
-    $monitorTask = Register-ScheduledTask -TaskName ("Report Altaro VM Backup State for " + $backupType  + " backups (Zabbix Trap)") -Trigger $globalTrigger -Action $monitorAction -Principal $systemPrincipal
+    $monitorTask = Register-ScheduledTask -TaskName ("Report Altaro VM Backup State for " + $backupType  + " backups (Zabbix Trap)") -Trigger $globalTrigger -Action $monitorAction -Principal $systemPrincipal -Description $guid
 
     $monitorTask.Triggers[0].Repetition.Interval = "PT1H"
     $monitorTask | Set-ScheduledTask
